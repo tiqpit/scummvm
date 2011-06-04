@@ -399,7 +399,7 @@ void OSystem_Android::addPluginDirectories(Common::FSList &dirs) const {
 bool OSystem_Android::hasFeature(Feature f) {
 	return (f == kFeatureFullscreenMode ||
 			f == kFeatureAspectRatioCorrection ||
-			f == kFeatureCursorHasPalette ||
+			f == kFeatureCursorPalette ||
 			f == kFeatureVirtualKeyboard ||
 			f == kFeatureOverlaySupportsAlpha);
 }
@@ -420,6 +420,11 @@ void OSystem_Android::setFeatureState(Feature f, bool enable) {
 		_virtkeybd_on = enable;
 		showVirtualKeyboard(enable);
 		break;
+	case kFeatureCursorPalette:
+		_use_mouse_palette = !enable;
+		if (!enable)
+			disableCursorPalette();
+		break;
 	default:
 		break;
 	}
@@ -433,6 +438,8 @@ bool OSystem_Android::getFeatureState(Feature f) {
 		return _ar_correction;
 	case kFeatureVirtualKeyboard:
 		return _virtkeybd_on;
+	case kFeatureCursorPalette:
+		return _use_mouse_palette;
 	default:
 		return false;
 	}

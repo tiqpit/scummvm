@@ -163,7 +163,7 @@ bool OSystem_Dreamcast::hasFeature(Feature f)
   case kFeatureAspectRatioCorrection:
   case kFeatureVirtualKeyboard:
   case kFeatureOverlaySupportsAlpha:
-  case kFeatureCursorHasPalette:
+  case kFeatureCursorPalette:
     return true;
   default:
     return false;
@@ -181,6 +181,9 @@ void OSystem_Dreamcast::setFeatureState(Feature f, bool enable)
   case kFeatureVirtualKeyboard:
     _softkbd_on = enable;
     break;
+  case kFeatureCursorPalette:
+    _enable_cursor_palette = enable;
+    break;
   default:
     break;
   }
@@ -193,6 +196,8 @@ bool OSystem_Dreamcast::getFeatureState(Feature f)
     return _aspect_stretch;
   case kFeatureVirtualKeyboard:
     return _softkbd_on;
+  case kFeatureCursorPalette:
+    return _enable_cursor_palette;
   default:
     return false;
   }

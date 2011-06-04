@@ -30,7 +30,6 @@ Common::String MiscTests::getHumanReadableFormat(TimeDate &td) {
 
 void MiscTests::timerCallback(void *arg) {
 	// Increment arg which actually points to an int
-	// arg must point to a static data, threads otherwise have their own stack
 	int &valToModify = *((int *) arg);
 	valToModify = 999; // some arbitrary value
 }
@@ -110,7 +109,7 @@ TestExitStatus MiscTests::testDateTime() {
 }
 
 TestExitStatus MiscTests::testTimers() {
-	static int valToModify = 0;
+	int valToModify = 0;
 	if (g_system->getTimerManager()->installTimerProc(timerCallback, 100000, &valToModify)) {
 		g_system->delayMillis(150);
 		g_system->getTimerManager()->removeTimerProc(timerCallback);
@@ -132,7 +131,7 @@ TestExitStatus MiscTests::testMutexes() {
 		Testsuite::writeOnScreen("Installing mutex", Common::Point(0, 100));
 	}
 
-	static SharedVars sv = {1, 1, true, g_system->createMutex()};
+	SharedVars sv = {1, 1, true, g_system->createMutex()};
 
 	if (g_system->getTimerManager()->installTimerProc(criticalSection, 100000, &sv)) {
 		g_system->delayMillis(150);

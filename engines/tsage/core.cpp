@@ -21,6 +21,7 @@
  */
 
 #include "common/system.h"
+#include "common/config-manager.h"
 #include "engines/engine.h"
 #include "graphics/palette.h"
 #include "tsage/tsage.h"
@@ -1352,6 +1353,8 @@ void ScenePalette::changeBackground(const Rect &bounds, FadeMode fadeMode) {
 void ScenePalette::synchronize(Serializer &s) {
 	if (s.getVersion() >= 2)
 		SavedObject::synchronize(s);
+	if (s.getVersion() >= 5)
+		_listeners.synchronize(s);
 
 	s.syncBytes(_palette, 256 * 3);
 	s.syncAsSint32LE(_colors.foreground);
@@ -1687,6 +1690,7 @@ SceneObject::SceneObject() : SceneHotspot() {
 	_flags |= OBJFLAG_PANES;
 
 	_frameChange = 0;
+	_visage = 0;
 }
 
 SceneObject::SceneObject(const SceneObject &so) : SceneHotspot() {
@@ -2562,6 +2566,9 @@ void SceneText::synchronize(Serializer &s) {
 	s.syncAsSint16LE(_color2);
 	s.syncAsSint16LE(_color3);
 	SYNC_ENUM(_textMode, TextAlign);
+
+	if (s.getVersion() >= 5)
+		_textSurface.synchronize(s);
 }
 
 /*--------------------------------------------------------------------------*/

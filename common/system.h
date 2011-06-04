@@ -128,11 +128,19 @@ public:
 	 *  - fullscreen mode
 	 *  - aspect ration correction
 	 *  - a virtual keyboard for text entry (on PDAs)
+	 *
+	 * One has to distinguish between the *availability* of a feature,
+	 * which can be checked using hasFeature(), and its *state*.
+	 * For example, the SDL backend *has* the kFeatureFullscreenMode,
+	 * so hasFeature returns true for it. On the other hand,
+	 * fullscreen mode may be active or not; this can be determined
+	 * by checking the state via getFeatureState(). Finally, to
+	 * switch between fullscreen and windowed mode, use setFeatureState().
 	 */
 	enum Feature {
 		/**
-		 * If your backend supports both a windowed and a fullscreen mode,
-		 * then this feature flag can be used to switch between the two.
+		 * If supported, this feature flag can be used to switch between
+		 * windowed and fullscreen mode.
 		 */
 		kFeatureFullscreenMode,
 
@@ -144,10 +152,10 @@ public:
 		 * pixels). When the backend support this, then games running at
 		 * 320x200 pixels should be scaled up to 320x240 pixels. For all other
 		 * resolutions, ignore this feature flag.
-		 * @note You can find utility functions in common/scaler.h which can
-		 *       be used to implement aspect ratio correction. In particular,
+		 * @note Backend implementors can find utility functions in common/scaler.h
+		 *       which can be used to implement aspect ratio correction. In
 		 *       stretch200To240() can stretch a rect, including (very fast)
-		 *       interpolation, and works in-place.
+		 *       particular, interpolation, and works in-place.
 		 */
 		kFeatureAspectRatioCorrection,
 
@@ -159,43 +167,58 @@ public:
 		kFeatureVirtualKeyboard,
 
 		/**
-		 * This flag determines whether or not the cursor can have its own palette.
-		 * It is currently used only by some Macintosh versions of Humongous
-		 * Entertainment games. If the backend doesn't implement this feature then
-		 * the engine switches to b/w versions of cursors.
-		 * The GUI also relies on this feature for mouse cursors.
+		 * Backends supporting this feature allow specifying a custom palette
+		 * for the cursor. The custom palette is used if the feature state
+		 * is set to true by the client code via setFeatureState().
 		 *
-		 * To enable the cursor palette call "disableCursorPalette" with false.
-		 * @see disableCursorPalette
+		 * It is currently used only by some Macintosh versions of Humongous
+		 * Entertainment games. If the backend doesn't implement this feature
+		 * then the engine switches to b/w versions of cursors.
+		 * The GUI also relies on this feature for mouse cursors.
 		 */
-		kFeatureCursorHasPalette,
+		kFeatureCursorPalette,
 
 		/**
-		 * Set to true if the overlay pixel format has an alpha channel.
-		 * This should only be set if it offers at least 3-4 bits of accuracy,
-		 * as opposed to a single alpha bit.
+		 * A backend have this feature if its overlay pixel format has an alpha
+		 * channel which offers at least 3-4 bits of accuracy (as opposed to
+		 * just a single alpha bit).
+		 *
+		 * This feature has no associated state.
 		 */
 		kFeatureOverlaySupportsAlpha,
 
 		/**
-		 * Set to true to iconify the window.
+		 * Client code can set the state of this feature to true in order to
+		 * iconify the application window.
 		 */
 		kFeatureIconifyWindow,
 
 		/**
-		 * This feature, set to true, is a hint toward the backend to disable all
-		 * key filtering/mapping, in cases where it would be beneficial to do so.
-		 * As an example case, this is used in the agi engine's predictive dialog.
+		 * Setting the state of this feature to true tells the backend to disable
+		 * all key filtering/mapping, in cases where it would be beneficial to do so.
+		 * As an example case, this is used in the AGI engine's predictive dialog.
 		 * When the dialog is displayed this feature is set so that backends with
 		 * phone-like keypad temporarily unmap all user actions which leads to
 		 * comfortable word entry. Conversely, when the dialog exits the feature
 		 * is set to false.
+		 *
+		 * TODO: The word 'beneficial' above is very unclear. Beneficial to
+		 * whom and for what??? Just giving an example is not enough.
+		 *
 		 * TODO: Fingolfin suggests that the way the feature is used can be
 		 * generalized in this sense: Have a keyboard mapping feature, which the
 		 * engine queries for to assign keys to actions ("Here's my default key
 		 * map for these actions, what do you want them set to?").
 		 */
-		kFeatureDisableKeyFiltering
+		kFeatureDisableKeyFiltering,
+
+		/**
+		 * The presence of this feature indicates whether the displayLogFile()
+		 * call is supported.
+		 *
+		 * This feature has no associated state.
+		 */
+		kFeatureDisplayLogFile
 	};
 
 	/**
@@ -770,24 +793,12 @@ public:
 	 * The palette entries from 'start' till (start+num-1) will be replaced - so
 	 * a full palette update is accomplished via start=0, num=256.
 	 *
-	 * Backends which implement it should have kFeatureCursorHasPalette flag set
+	 * Backends which implement it should have kFeatureCursorPalette flag set
 	 *
 	 * @see setPalette
-	 * @see kFeatureCursorHasPalette
+	 * @see kFeatureCursorPalette
 	 */
 	virtual void setCursorPalette(const byte *colors, uint start, uint num) {}
-
-	/**
-	 * Disable or enable cursor palette.
-	 *
-	 * Backends which implement it should have kFeatureCursorHasPalette flag set
-	 *
-	 * @param disable  True to disable, false to enable.
-	 *
-	 * @see setPalette
-	 * @see kFeatureCursorHasPalette
-	 */
-	virtual void disableCursorPalette(bool disable) {}
 
 	//@}
 
@@ -1010,6 +1021,29 @@ public:
 	virtual void logMessage(LogMessageType::Type type, const char *message);
 
 	/**
+	 * Open the log file in a way that allows the user to review it,
+	 * and possibly email it (or parts of it) to the ScummVM team,
+	 * e.g. as part of a bug report.
+	 *
+	 * On a desktop operating system, this would typically launch
+	 * some kind of (external) text editor / viewer.
+	 * On a phone, it might also cause a context switch to another
+	 * application. Finally, on some ports, it might not be supported.
+	 * at all, and so do nothing.
+	 *
+	 * The kFeatureDisplayLogFile feature flag can be used to
+	 * test whether this call has been implemented by the active
+	 * backend.
+	 *
+	 * @return true if all seems to have gone fine, false if an error occurred
+	 *
+	 * @note An error could mean that the log file did not exist,
+	 * or the editor could not launch. However, a return value of true does
+	 * not guarantee that the user actually will the log file.
+	 */
+	virtual bool displayLogFile() { return false; }
+
+	/**
 	 * Returns the locale of the system.
 	 *
 	 * This returns the currently set up locale of the system, on which
@@ -1031,7 +1065,7 @@ public:
 };
 
 
-/** The global OSystem instance. Initialised in main(). */
+/** The global OSystem instance. Initialized in main(). */
 extern OSystem *g_system;
 
 #endif
