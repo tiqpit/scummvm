@@ -517,6 +517,8 @@ AgiEngine::AgiEngine(OSystem *syst, const AGIGameDescription *gameDesc) : AgiBas
 	memset(&_debug, 0, sizeof(struct AgiDebug));
 	memset(&_mouse, 0, sizeof(struct Mouse));
 
+	_game._vm = this;
+
 	_game.clockEnabled = false;
 	_game.state = STATE_INIT;
 
@@ -552,7 +554,7 @@ AgiEngine::AgiEngine(OSystem *syst, const AGIGameDescription *gameDesc) : AgiBas
 		_game.controllerOccured[i] = false;
 
 	setupOpcodes();
-	_curLogic = NULL;
+	_game._curLogic = NULL;
 	_timerHack = 0;
 }
 
